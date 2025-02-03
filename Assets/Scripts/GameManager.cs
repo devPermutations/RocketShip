@@ -35,16 +35,22 @@ public class GameManager : MonoBehaviour
 
     #region Events
     public event Action<float> OnGoldChanged;    // Single event for gold changes
+    public event Action<float> OnMetalChanged;   // New event
+    public event Action<float> OnEnergyChanged;  // New event
     public event Action OnGameOver;              
     #endregion
 
     #region Private Fields
     private float m_Gold;                        // Single gold variable
+    private float m_Metal;    // New resource
+    private float m_Energy;   // New resource
     private RocketController m_RocketController;       
     #endregion
 
     #region Properties
     public float Gold => m_Gold;       
+    public float Metal => m_Metal;   // New property
+    public float Energy => m_Energy; // New property
     #endregion
 
     #region Unity Lifecycle
@@ -66,6 +72,20 @@ public class GameManager : MonoBehaviour
     {
         m_Gold += _amount;
         OnGoldChanged?.Invoke(m_Gold);
+        SaveGameData();
+    }
+
+    public void AddMetal(float _amount)
+    {
+        m_Metal += _amount;
+        OnMetalChanged?.Invoke(m_Metal);
+        SaveGameData();
+    }
+
+    public void AddEnergy(float _amount)
+    {
+        m_Energy += _amount;
+        OnEnergyChanged?.Invoke(m_Energy);
         SaveGameData();
     }
 
@@ -144,6 +164,20 @@ public class GameManager : MonoBehaviour
         OnGoldChanged?.Invoke(m_Gold);
         SaveGameData();
     }
+
+    public void SpendMetal(float _amount)
+    {
+        m_Metal -= _amount;
+        OnMetalChanged?.Invoke(m_Metal);
+        SaveGameData();
+    }
+
+    public void SpendEnergy(float _amount)
+    {
+        m_Energy -= _amount;
+        OnEnergyChanged?.Invoke(m_Energy);
+        SaveGameData();
+    }
     #endregion
 
     #region Private Methods
@@ -152,7 +186,7 @@ public class GameManager : MonoBehaviour
     /// </summary>
     private void SaveGameData()
     {
-        SaveSystem.SaveGame(m_Gold, m_RocketController);
+        SaveSystem.SaveGame(m_Gold, m_Metal, m_Energy, m_RocketController);
     }
 
     /// <summary>
@@ -164,7 +198,11 @@ public class GameManager : MonoBehaviour
         if (data != null)
         {
             m_Gold = data.gold;
+            m_Metal = data.metal;
+            m_Energy = data.energy;
             OnGoldChanged?.Invoke(m_Gold);
+            OnMetalChanged?.Invoke(m_Metal);
+            OnEnergyChanged?.Invoke(m_Energy);
             
             if (m_RocketController != null)
             {

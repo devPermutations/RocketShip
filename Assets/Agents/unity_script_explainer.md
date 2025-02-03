@@ -1,4 +1,4 @@
-I have a Unity script that I need to understand. Please analyze theis script following these steps:
+I have a Unity script that I need to understand. Please analyze this script following these steps:
 
 ## Script Overview:
 

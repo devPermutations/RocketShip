@@ -3,76 +3,84 @@ using TMPro;
 using UnityEngine.UI;
 
 /// <summary>
-/// Manages the game's UI elements including HUD displays for gold and fuel
+/// Manages all UI elements and their interactions in the game
 /// </summary>
 public class UIManager : MonoBehaviour
 {
-    [Header("UI References")]
-    [SerializeField] private TextMeshProUGUI m_GoldText;
-    [SerializeField] private Slider m_FuelSlider;
-    [SerializeField] private TextMeshProUGUI m_HeightText;
-    [SerializeField] private TextMeshProUGUI m_MaxHeightText;
+    #region Serialized Fields
+    [Header("HUD Elements")]
+    [SerializeField] private TextMeshProUGUI m_GoldText;           // Displays current gold amount
+    [SerializeField] private TextMeshProUGUI m_MetalText;          // Displays current metal amount
+    [SerializeField] private TextMeshProUGUI m_EnergyText;         // Displays current energy amount
+    [SerializeField] private Slider m_FuelSlider;                  // Shows fuel level
+    [SerializeField] private TextMeshProUGUI m_HeightText;         // Shows current height
+    [SerializeField] private TextMeshProUGUI m_MaxHeightText;      // Shows best height achieved
     
-    [Header("Game Over UI")]
-    [SerializeField] private GameObject m_GameOverPanel;
-    [SerializeField] private TextMeshProUGUI m_GameOverText;
-    [SerializeField] private Button m_RestartButton;
+    [Header("Game Over Panel")]
+    [SerializeField] private GameObject m_GameOverPanel;           // Container for game over UI
+    [SerializeField] private TextMeshProUGUI m_GameOverText;      // Game over message
+    [SerializeField] private Button m_RestartButton;              // Button to restart game
+    
+    [Header("Upgrade UI")]
+    // Buttons for different upgrade types
     [SerializeField] private Button m_SpeedUpgradeButton;
     [SerializeField] private Button m_FuelUpgradeButton;
     [SerializeField] private Button m_TurnSpeedUpgradeButton;
+    
+    // Text displays for upgrade stats
     [SerializeField] private TextMeshProUGUI m_SpeedStatsText;
     [SerializeField] private TextMeshProUGUI m_FuelStatsText;
     [SerializeField] private TextMeshProUGUI m_TurnSpeedStatsText;
+    
+    // Text displays for upgrade costs
     [SerializeField] private TextMeshProUGUI m_SpeedUpgradeCostText;
     [SerializeField] private TextMeshProUGUI m_FuelUpgradeCostText;
     [SerializeField] private TextMeshProUGUI m_TurnSpeedUpgradeCostText;
     
-    [Header("Colors")]
-    [SerializeField] private Color m_FullFuelColor = Color.green;
-    [SerializeField] private Color m_LowFuelColor = Color.red;
-    
-    private RocketController m_Rocket;
-    private GameManager m_GameManager;
-    private UpgradeManager m_UpgradeManager;
+    [Header("Visual Settings")]
+    [SerializeField] private Color m_FullFuelColor = Color.green;  // Color when fuel is full
+    [SerializeField] private Color m_LowFuelColor = Color.red;     // Color when fuel is low
+    #endregion
 
+    #region Private Fields
+    private RocketController m_Rocket;        // Reference to player's rocket
+    private GameManager m_GameManager;        // Reference to game manager
+    private UpgradeManager m_UpgradeManager;  // Reference to upgrade system
+    #endregion
+
+    #region Unity Lifecycle
+    /// <summary>
+    /// Initialize UI and set up event listeners
+    /// </summary>
     private void Start()
     {
-        // Get references
+        // Get necessary component references
         m_Rocket = FindFirstObjectByType<RocketController>();
         m_GameManager = GameManager.Instance;
         m_UpgradeManager = FindFirstObjectByType<UpgradeManager>();
 
-        // Subscribe to events
+        // Subscribe to game events
         if (m_GameManager != null)
         {
             m_GameManager.OnGoldChanged += UpdateGoldDisplay;
+            m_GameManager.OnMetalChanged += UpdateMetalDisplay;
+            m_GameManager.OnEnergyChanged += UpdateEnergyDisplay;
             m_GameManager.OnGameOver += ShowGameOver;
         }
 
-        // Initialize display
+        // Initialize UI state
         UpdateGoldDisplay(m_GameManager.Gold);
-        
-        // Hide game over UI at start
-        if (m_GameOverPanel != null)
-        {
-            m_GameOverPanel.SetActive(false);
-        }
+        UpdateMetalDisplay(m_GameManager.Metal);
+        UpdateEnergyDisplay(m_GameManager.Energy);
+        m_GameOverPanel?.SetActive(false);
 
-        // Set up restart button
-        if (m_RestartButton != null)
-        {
-            m_RestartButton.onClick.AddListener(RestartGame);
-        }
-
-        // Set up upgrade buttons
-        if (m_SpeedUpgradeButton != null)
-            m_SpeedUpgradeButton.onClick.AddListener(() => TryUpgrade(UpgradeType.Speed));
-        if (m_FuelUpgradeButton != null)
-            m_FuelUpgradeButton.onClick.AddListener(() => TryUpgrade(UpgradeType.FuelCapacity));
-        if (m_TurnSpeedUpgradeButton != null)
-            m_TurnSpeedUpgradeButton.onClick.AddListener(() => TryUpgrade(UpgradeType.TurnSpeed));
+        // Set up button listeners
+        SetupButtonListeners();
     }
 
+    /// <summary>
+    /// Update dynamic UI elements
+    /// </summary>
     private void Update()
     {
         if (m_Rocket != null)
@@ -81,15 +89,45 @@ public class UIManager : MonoBehaviour
             UpdateHeightDisplay();
         }
     }
+    #endregion
 
+    #region UI Update Methods
+    /// <summary>
+    /// Updates the gold counter display
+    /// </summary>
     private void UpdateGoldDisplay(float _gold)
     {
         if (m_GoldText != null)
         {
-            m_GoldText.text = $"Gold: {_gold:F0}";
+            m_GoldText.text = $"$ {_gold:F0}";
         }
     }
 
+    /// <summary>
+    /// Updates the metal counter display
+    /// </summary>
+    private void UpdateMetalDisplay(float _metal)
+    {
+        if (m_MetalText != null)
+        {
+            m_MetalText.text = $"Metal: {_metal:F0}";
+        }
+    }
+
+    /// <summary>
+    /// Updates the energy counter display
+    /// </summary>
+    private void UpdateEnergyDisplay(float _energy)
+    {
+        if (m_EnergyText != null)
+        {
+            m_EnergyText.text = $"Energy: {_energy:F0}";
+        }
+    }
+
+    /// <summary>
+    /// Updates the fuel gauge and its color
+    /// </summary>
     private void UpdateFuelDisplay()
     {
         if (m_FuelSlider != null)
@@ -97,7 +135,7 @@ public class UIManager : MonoBehaviour
             float fuelRatio = m_Rocket.CurrentFuel / m_Rocket.MaxFuel;
             m_FuelSlider.value = fuelRatio;
             
-            // Update fuel bar color
+            // Interpolate color based on fuel level
             Image fillImage = m_FuelSlider.fillRect.GetComponent<Image>();
             if (fillImage != null)
             {
@@ -106,6 +144,9 @@ public class UIManager : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Updates current and best height displays
+    /// </summary>
     private void UpdateHeightDisplay()
     {
         if (m_HeightText != null)
@@ -118,22 +159,25 @@ public class UIManager : MonoBehaviour
             m_MaxHeightText.text = $"Best Height: {m_Rocket.MaxHeight:F0}m";
         }
     }
+    #endregion
 
+    #region Game Over Handling
+    /// <summary>
+    /// Shows game over UI and updates upgrade options
+    /// </summary>
     private void ShowGameOver()
     {
-        if (m_GameOverPanel != null)
-        {
-            m_GameOverPanel.SetActive(true);
-        }
-
+        m_GameOverPanel?.SetActive(true);
         if (m_GameOverText != null)
         {
             m_GameOverText.text = "Game Over!";
         }
-
         UpdateUpgradeButtons();
     }
 
+    /// <summary>
+    /// Updates all upgrade button states and costs
+    /// </summary>
     private void UpdateUpgradeButtons()
     {
         if (m_UpgradeManager == null) return;
@@ -143,6 +187,9 @@ public class UIManager : MonoBehaviour
         UpdateUpgradeButton(UpgradeType.TurnSpeed, m_TurnSpeedUpgradeButton, m_TurnSpeedStatsText, m_TurnSpeedUpgradeCostText);
     }
 
+    /// <summary>
+    /// Updates a single upgrade button's state and text
+    /// </summary>
     private void UpdateUpgradeButton(UpgradeType type, Button button, TextMeshProUGUI statsText, TextMeshProUGUI costText)
     {
         if (button == null) return;
@@ -150,17 +197,15 @@ public class UIManager : MonoBehaviour
         button.interactable = m_UpgradeManager.CanAffordUpgrade(type);
         var info = m_UpgradeManager.GetUpgradeInfo(type);
 
-        if (statsText != null)
-        {
-            statsText.text = $"{info.currentValue:F1}";
-        }
-
-        if (costText != null)
-        {
-            costText.text = $"{info.cost:F0} Gold";
-        }
+        if (statsText != null) statsText.text = $"{info.currentValue:F1}";
+        if (costText != null) costText.text = $"{info.cost:F0} Gold";
     }
+    #endregion
 
+    #region Button Handlers
+    /// <summary>
+    /// Attempts to purchase and apply an upgrade
+    /// </summary>
     private void TryUpgrade(UpgradeType type)
     {
         if (m_UpgradeManager != null && m_UpgradeManager.TryUpgrade(type))
@@ -169,42 +214,47 @@ public class UIManager : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Handles game restart
+    /// </summary>
     private void RestartGame()
     {
-        // Hide game over UI
-        if (m_GameOverPanel != null)
-        {
-            m_GameOverPanel.SetActive(false);
-        }
-
-        // Tell GameManager to restart
-        if (m_GameManager != null)
-        {
-            m_GameManager.RestartGame();
-        }
+        m_GameOverPanel?.SetActive(false);
+        m_GameManager?.RestartGame();
     }
 
+    /// <summary>
+    /// Sets up all button click listeners
+    /// </summary>
+    private void SetupButtonListeners()
+    {
+        m_RestartButton?.onClick.AddListener(RestartGame);
+        m_SpeedUpgradeButton?.onClick.AddListener(() => TryUpgrade(UpgradeType.Speed));
+        m_FuelUpgradeButton?.onClick.AddListener(() => TryUpgrade(UpgradeType.FuelCapacity));
+        m_TurnSpeedUpgradeButton?.onClick.AddListener(() => TryUpgrade(UpgradeType.TurnSpeed));
+    }
+    #endregion
+
+    #region Cleanup
+    /// <summary>
+    /// Clean up event subscriptions when destroyed
+    /// </summary>
     private void OnDestroy()
     {
         // Unsubscribe from events
         if (m_GameManager != null)
         {
             m_GameManager.OnGoldChanged -= UpdateGoldDisplay;
+            m_GameManager.OnMetalChanged -= UpdateMetalDisplay;
+            m_GameManager.OnEnergyChanged -= UpdateEnergyDisplay;
             m_GameManager.OnGameOver -= ShowGameOver;
         }
 
-        // Clean up button listener
-        if (m_RestartButton != null)
-        {
-            m_RestartButton.onClick.RemoveListener(RestartGame);
-        }
-
-        // Clean up upgrade button listeners
-        if (m_SpeedUpgradeButton != null)
-            m_SpeedUpgradeButton.onClick.RemoveListener(() => TryUpgrade(UpgradeType.Speed));
-        if (m_FuelUpgradeButton != null)
-            m_FuelUpgradeButton.onClick.RemoveListener(() => TryUpgrade(UpgradeType.FuelCapacity));
-        if (m_TurnSpeedUpgradeButton != null)
-            m_TurnSpeedUpgradeButton.onClick.RemoveListener(() => TryUpgrade(UpgradeType.TurnSpeed));
+        // Remove button listeners
+        m_RestartButton?.onClick.RemoveListener(RestartGame);
+        m_SpeedUpgradeButton?.onClick.RemoveListener(() => TryUpgrade(UpgradeType.Speed));
+        m_FuelUpgradeButton?.onClick.RemoveListener(() => TryUpgrade(UpgradeType.FuelCapacity));
+        m_TurnSpeedUpgradeButton?.onClick.RemoveListener(() => TryUpgrade(UpgradeType.TurnSpeed));
     }
+    #endregion
 } 

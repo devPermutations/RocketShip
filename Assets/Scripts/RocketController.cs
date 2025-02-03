@@ -22,11 +22,11 @@ public class RocketController : MonoBehaviour
     [SerializeField] private float m_LiftoffHeight = 1f;     // Height considered as "lifted off"
     [SerializeField] private float m_SafeTime = 2f;          // Time after liftoff before crash check
     
-    [Header("Audio")]
-    [SerializeField] private AudioSource m_ThrusterAudio;  // Reference to AudioSource component
-    [SerializeField] private float m_ThrusterVolume = 0.7f;  // Volume control
-    [SerializeField] private float m_AudioFadeTime = 0.2f;  // Time to fade out
-    
+    [Header("Mouse/Touch Control")]
+    [SerializeField] private float m_RotationDamping = 0.5f;
+    [SerializeField] private float m_MaxPointerDistance = 2f;
+    [SerializeField] private float m_MinPointerDistance = 0.1f;
+
     private float m_CurrentFuel;      // Current amount of fuel
     private Rigidbody m_Rigidbody;    // Reference to the rocket's Rigidbody component
     private bool m_IsAlive = true;    // Tracks if the rocket is still operational
@@ -34,9 +34,13 @@ public class RocketController : MonoBehaviour
     private float m_LiftoffTime = 0f;            // Time when rocket lifted off
     private float m_CurrentHeight = 0f;         // Current height in this run
     private static float s_MaxHeight = 0f;      // All-time max height across runs
-    private float m_TargetVolume;
-    private float m_CurrentVolume;
-    private bool m_IsFading;
+
+    private bool m_IsPointerDown = false;
+    private Vector3 m_TargetPosition;
+    private Camera m_MainCamera;
+    private Vector3 m_LastValidDirection;
+    private bool m_WantsToThrust = false;  // Add this field to track thrust intent
+
     #endregion
 
     #region Properties
@@ -47,6 +51,7 @@ public class RocketController : MonoBehaviour
     public float TurnSpeed => m_TurnSpeed;        // Public access to turn speed
     public float CurrentHeight => m_CurrentHeight;
     public float MaxHeight => s_MaxHeight;      // Best height ever achieved
+    public bool HasFuel => m_CurrentFuel > 0;
     #endregion
 
     #region Unity Lifecycle
@@ -85,24 +90,24 @@ public class RocketController : MonoBehaviour
             cameraFollow.SetTarget(transform);
         }
 
-        // Set up audio if not already assigned
-        if (m_ThrusterAudio == null)
-        {
-            m_ThrusterAudio = gameObject.AddComponent<AudioSource>();
-            m_ThrusterAudio.loop = true;
-            m_ThrusterAudio.playOnAwake = false;
-            m_ThrusterAudio.volume = m_ThrusterVolume;
-        }
+        m_MainCamera = Camera.main;
     }
 
     /// <summary>
     /// Handle input and fuel management each frame
     /// </summary>
-    private void FixedUpdate()  // Changed from Update to FixedUpdate for physics
+    private void Update()
+    {
+        // Handle input detection in Update for better responsiveness
+        HandleInputDetection();
+    }
+
+    private void FixedUpdate()
     {
         if (!m_IsAlive) return;
-        
-        HandleInput();
+
+        // Apply physics based on input state
+        ApplyMovement();
         ConsumeFuel();
         CheckFuel();
         StabilizeRocket();
@@ -146,111 +151,9 @@ public class RocketController : MonoBehaviour
             }
         }
     }
-
-    private void Update()
-    {
-        // Handle audio fading
-        if (m_IsFading && m_ThrusterAudio != null)
-        {
-            m_CurrentVolume = Mathf.MoveTowards(m_CurrentVolume, m_TargetVolume, Time.deltaTime / m_AudioFadeTime);
-            m_ThrusterAudio.volume = m_CurrentVolume;
-
-            if (m_CurrentVolume == 0)
-            {
-                m_ThrusterAudio.Stop();
-                m_IsFading = false;
-            }
-        }
-    }
     #endregion
 
     #region Private Methods
-    /// <summary>
-    /// Processes player input for movement and rotation
-    /// </summary>
-    private void HandleInput()
-    {
-        // Handle thrust
-        if (Input.GetKey(KeyCode.W) && m_CurrentFuel > 0)
-        {
-            // Apply thrust
-            Vector3 thrustForce = transform.up * (m_BaseSpeed + m_GravityCompensation);
-            m_Rigidbody.AddForce(thrustForce * Time.fixedDeltaTime, ForceMode.Force);
-
-            // Enable thruster effects
-            if (m_ThrusterParticles != null)
-            {
-                foreach (var thruster in m_ThrusterParticles)
-                {
-                    if (thruster != null)
-                    {
-                        if (!thruster.gameObject.activeSelf)
-                        {
-                            thruster.gameObject.SetActive(true);
-                        }
-                        thruster.Play();
-                    }
-                }
-            }
-
-            // Start or continue thruster sound
-            if (m_ThrusterAudio != null)
-            {
-                m_IsFading = false;
-                m_CurrentVolume = m_ThrusterVolume;
-                m_ThrusterAudio.volume = m_ThrusterVolume;
-                if (!m_ThrusterAudio.isPlaying)
-                {
-                    m_ThrusterAudio.Play();
-                }
-            }
-        }
-        else
-        {
-            // Disable effects when not thrusting
-            if (m_ThrusterParticles != null)
-            {
-                foreach (var thruster in m_ThrusterParticles)
-                {
-                    if (thruster != null)
-                    {
-                        thruster.Stop();
-                    }
-                }
-            }
-
-            // Start fading out thruster sound
-            if (m_ThrusterAudio != null && m_ThrusterAudio.isPlaying && !m_IsFading)
-            {
-                m_IsFading = true;
-                m_TargetVolume = 0f;
-                m_CurrentVolume = m_ThrusterAudio.volume;
-            }
-        }
-
-        // Rotation with A/D keys
-        float rotation = 0f;
-        if (Input.GetKey(KeyCode.A)) rotation = m_TurnSpeed;
-        if (Input.GetKey(KeyCode.D)) rotation = -m_TurnSpeed;
-        
-        // Apply rotation
-        if (rotation != 0)
-        {
-            transform.Rotate(Vector3.forward * rotation * Time.fixedDeltaTime);
-        }
-    }
-
-    /// <summary>
-    /// Manages fuel consumption during thrust
-    /// </summary>
-    private void ConsumeFuel()
-    {
-        if (Input.GetKey(KeyCode.W))
-        {
-            m_CurrentFuel -= m_FuelConsumptionRate * Time.fixedDeltaTime;
-        }
-    }
-
     /// <summary>
     /// Checks if fuel is depleted and triggers crash if necessary
     /// </summary>
@@ -292,6 +195,117 @@ public class RocketController : MonoBehaviour
         if (m_CurrentHeight > s_MaxHeight)
         {
             s_MaxHeight = m_CurrentHeight;
+        }
+    }
+
+    private void HandleThrusters(bool isThrusting)
+    {
+        // Handle particle effects
+        if (m_ThrusterParticles != null)
+        {
+            foreach (var thruster in m_ThrusterParticles)
+            {
+                if (thruster != null)
+                {
+                    // Always ensure GameObject is active
+                    thruster.gameObject.SetActive(true);
+
+                    if (isThrusting)
+                    {
+                        if (!thruster.isPlaying)
+                        {
+                            thruster.Clear(); // Clear any old particles
+                            thruster.Play();
+                        }
+                    }
+                    else
+                    {
+                        thruster.Stop();
+                    }
+                }
+            }
+        }
+
+        // Handle sound through SoundManager
+        SoundManager.Instance?.SetThrusterSound(isThrusting);
+    }
+
+    private void HandleInputDetection()
+    {
+        // Handle mouse/touch input first
+        if (Input.GetMouseButtonDown(0))
+        {
+            m_IsPointerDown = true;
+        }
+        else if (Input.GetMouseButtonUp(0))
+        {
+            m_IsPointerDown = false;
+            m_WantsToThrust = false;
+            HandleThrusters(false);
+            return;
+        }
+
+        // Update thrust intent based on input method
+        if (m_IsPointerDown)
+        {
+            UpdatePointerTarget();
+        }
+        else
+        {
+            m_WantsToThrust = Input.GetKey(KeyCode.W);
+        }
+    }
+
+    private void UpdatePointerTarget()
+    {
+        if (m_MainCamera == null) return;
+
+        // Convert mouse position to world space
+        Vector3 mousePos = Input.mousePosition;
+        mousePos.z = transform.position.z - m_MainCamera.transform.position.z;
+        m_TargetPosition = m_MainCamera.ScreenToWorldPoint(mousePos);
+        m_TargetPosition.z = transform.position.z;
+
+        // Calculate direction to target
+        Vector3 direction = m_TargetPosition - transform.position;
+        
+        // Update direction and enable thrust while mouse is held
+        m_LastValidDirection = direction.normalized;
+        m_WantsToThrust = true;
+    }
+
+    private void ApplyMovement()
+    {
+        if (!m_WantsToThrust || m_CurrentFuel <= 0)
+        {
+            HandleThrusters(false);
+            return;
+        }
+
+        // Apply thrust
+        Vector3 thrustForce = transform.up * (m_BaseSpeed + m_GravityCompensation);
+        m_Rigidbody.AddForce(thrustForce * Time.fixedDeltaTime, ForceMode.Force);
+        HandleThrusters(true);
+        ConsumeFuel();
+
+        // Handle rotation
+        if (m_IsPointerDown)
+        {
+            // Mouse/touch rotation
+            Quaternion targetRotation = Quaternion.LookRotation(Vector3.forward, m_LastValidDirection);
+            transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, m_RotationDamping * Time.fixedDeltaTime);
+        }
+        else
+        {
+            // Keyboard rotation
+            float rotation = 0f;
+            if (Input.GetKey(KeyCode.A)) rotation = m_TurnSpeed;
+            if (Input.GetKey(KeyCode.D)) rotation = -m_TurnSpeed;
+            
+            if (rotation != 0)
+            {
+                transform.Rotate(Vector3.forward * rotation * Time.fixedDeltaTime);
+            }
         }
     }
     #endregion
@@ -388,12 +402,17 @@ public class RocketController : MonoBehaviour
             }
         }
 
-        // Stop audio immediately on reset
-        if (m_ThrusterAudio != null)
+        // Stop sounds through SoundManager
+        SoundManager.Instance?.StopRocketSounds();
+    }
+
+    private void ConsumeFuel()
+    {
+        m_CurrentFuel -= m_FuelConsumptionRate * Time.fixedDeltaTime;
+        if (m_CurrentFuel <= 0)
         {
-            m_ThrusterAudio.Stop();
-            m_IsFading = false;
-            m_CurrentVolume = 0f;
+            m_CurrentFuel = 0;
+            Crash();
         }
     }
     #endregion

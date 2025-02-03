@@ -100,6 +100,13 @@ MonoBehaviour:
   m_Value: 20
   m_GoldColor: {r: 1, g: 0.84, b: 0, a: 1}
   m_FuelColor: {r: 0, g: 0.8, b: 0.2, a: 1}
+  m_EnergyColor: {r: 0, g: 0.4, b: 1, a: 1}
+  m_MetalColor: {r: 0.7, g: 0.7, b: 0.7, a: 1}
+  m_GoldPickupSound: {fileID: 8300000, guid: e3bae2a7ee12c9c45b538d752e79f5f4, type: 3}
+  m_FuelPickupSound: {fileID: 8300000, guid: c02ce8b75b018c54d986280154a4b451, type: 3}
+  m_EnergyPickupSound: {fileID: 8300000, guid: e3bae2a7ee12c9c45b538d752e79f5f4, type: 3}
+  m_MetalPickupSound: {fileID: 8300000, guid: e3bae2a7ee12c9c45b538d752e79f5f4, type: 3}
+  m_Volume: 0.7
 --- !u!1 &3571503968810044871
 GameObject:
   m_ObjectHideFlags: 0

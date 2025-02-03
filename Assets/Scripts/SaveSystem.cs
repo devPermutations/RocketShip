@@ -1,5 +1,6 @@
 using UnityEngine;
 using System;
+using System.IO;
 
 /// <summary>
 /// Data structure for saving game state
@@ -8,10 +9,26 @@ using System;
 public class GameData
 {
     public float gold;         // This will now store total gold
+    public float metal;        // New field
+    public float energy;       // New field
     public float baseSpeed;    // Saved rocket speed
     public float maxFuel;      // Saved fuel capacity
     public float turnSpeed;    // Saved turn speed
     public float maxHeight;    // Best height ever achieved
+
+    public GameData(float _gold, float _metal, float _energy, RocketController _rocket)
+    {
+        gold = _gold;
+        metal = _metal;
+        energy = _energy;
+        if (_rocket != null)
+        {
+            baseSpeed = _rocket.BaseSpeed;
+            maxFuel = _rocket.MaxFuel;
+            turnSpeed = _rocket.TurnSpeed;
+            maxHeight = _rocket.MaxHeight;
+        }
+    }
 }
 
 /// <summary>
@@ -20,30 +37,21 @@ public class GameData
 public static class SaveSystem
 {
     private const string c_SaveKey = "RocketGameSave";    // Key for PlayerPrefs storage
+    private const string SAVE_FILE = "gamesave.json";
 
     /// <summary>
     /// Saves the current game state
     /// </summary>
-    /// <param name="_totalGold">Current total gold amount</param>
+    /// <param name="_gold">Current total gold amount</param>
+    /// <param name="_metal">Current metal amount</param>
+    /// <param name="_energy">Current energy amount</param>
     /// <param name="_rocket">Reference to the rocket to save stats from</param>
-    public static void SaveGame(float _totalGold, RocketController _rocket)
+    public static void SaveGame(float _gold, float _metal, float _energy, RocketController _rocket)
     {
-        GameData data = new GameData
-        {
-            gold = _totalGold,
-            maxHeight = _rocket.MaxHeight  // Save best height
-        };
-
-        if (_rocket != null)
-        {
-            data.maxFuel = _rocket.MaxFuel;
-            data.baseSpeed = _rocket.BaseSpeed;
-            data.turnSpeed = _rocket.TurnSpeed;
-        }
-
+        GameData data = new GameData(_gold, _metal, _energy, _rocket);
         string json = JsonUtility.ToJson(data);
-        PlayerPrefs.SetString(c_SaveKey, json);
-        PlayerPrefs.Save();
+        string path = Path.Combine(Application.persistentDataPath, SAVE_FILE);
+        File.WriteAllText(path, json);
     }
 
     /// <summary>
@@ -52,12 +60,21 @@ public static class SaveSystem
     /// <returns>Saved game data or null if no save exists</returns>
     public static GameData LoadGame()
     {
-        if (PlayerPrefs.HasKey(c_SaveKey))
+        string path = Path.Combine(Application.persistentDataPath, SAVE_FILE);
+        if (File.Exists(path))
         {
-            string json = PlayerPrefs.GetString(c_SaveKey);
-            return JsonUtility.FromJson<GameData>(json);
+            try
+            {
+                string json = File.ReadAllText(path);
+                return JsonUtility.FromJson<GameData>(json);
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogError($"Error loading save file: {e.Message}");
+                return new GameData(0f, 0f, 0f, null); // Return new data with zeroed values
+            }
         }
-        return null;
+        return new GameData(0f, 0f, 0f, null); // Return new data if no save exists
     }
 
     /// <summary>
