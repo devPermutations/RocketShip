@@ -99,7 +99,7 @@ public class UIManager : MonoBehaviour
     {
         if (m_GoldText != null)
         {
-            m_GoldText.text = $"$ {_gold:F0}";
+            m_GoldText.text = $"{_gold:F0}";
         }
     }
 
@@ -110,7 +110,7 @@ public class UIManager : MonoBehaviour
     {
         if (m_MetalText != null)
         {
-            m_MetalText.text = $"Metal: {_metal:F0}";
+            m_MetalText.text = $"{_metal:F0}";
         }
     }
 
@@ -121,7 +121,7 @@ public class UIManager : MonoBehaviour
     {
         if (m_EnergyText != null)
         {
-            m_EnergyText.text = $"Energy: {_energy:F0}";
+            m_EnergyText.text = $"{_energy:F0}";
         }
     }
 
@@ -151,7 +151,7 @@ public class UIManager : MonoBehaviour
     {
         if (m_HeightText != null)
         {
-            m_HeightText.text = $"Height: {m_Rocket.CurrentHeight:F0}m";
+            m_HeightText.text = $"{m_Rocket.CurrentHeight:F0}";
         }
 
         if (m_MaxHeightText != null)
