@@ -15,6 +15,7 @@ public class GameData
     public float maxFuel;      // Saved fuel capacity
     public float turnSpeed;    // Saved turn speed
     public float maxHeight;    // Best height ever achieved
+    public float maxHealth;    // Add health tracking
 
     public GameData(float _gold, float _metal, float _energy, RocketController _rocket)
     {
@@ -27,6 +28,7 @@ public class GameData
             maxFuel = _rocket.MaxFuel;
             turnSpeed = _rocket.TurnSpeed;
             maxHeight = _rocket.MaxHeight;
+            maxHealth = _rocket.MaxHealth;
         }
     }
 }

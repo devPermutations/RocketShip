@@ -41,7 +41,8 @@ public class RadarLogic : MonoBehaviour
             m_PlayerIndicator.anchorMax = new Vector2(0.5f, 0.5f);
             m_PlayerIndicator.pivot = new Vector2(0.5f, 0.5f);
             m_PlayerIndicator.anchoredPosition = Vector2.zero;  // Center of radar
-            m_PlayerIndicator.sizeDelta = new Vector2(12f, 12f);  // Slightly larger than collectibles
+            m_PlayerIndicator.sizeDelta = new Vector2(30f, 30f);  // Slightly larger than collectibles
+
 
             // Set color
             if (playerDot.TryGetComponent<Image>(out Image image))

@@ -27,6 +27,10 @@ public class RocketController : MonoBehaviour
     [SerializeField] private float m_MaxPointerDistance = 2f;
     [SerializeField] private float m_MinPointerDistance = 0.1f;
 
+    [Header("Health Settings")]
+    [SerializeField] private float m_MaxHealth = 100f;
+    private float m_CurrentHealth;
+
     private float m_CurrentFuel;      // Current amount of fuel
     private Rigidbody m_Rigidbody;    // Reference to the rocket's Rigidbody component
     private bool m_IsAlive = true;    // Tracks if the rocket is still operational
@@ -52,6 +56,8 @@ public class RocketController : MonoBehaviour
     public float CurrentHeight => m_CurrentHeight;
     public float MaxHeight => s_MaxHeight;      // Best height ever achieved
     public bool HasFuel => m_CurrentFuel > 0;
+    public float MaxHealth => m_MaxHealth;
+    public float CurrentHealth => m_CurrentHealth;
     #endregion
 
     #region Unity Lifecycle
@@ -63,6 +69,7 @@ public class RocketController : MonoBehaviour
         m_Rigidbody = GetComponent<Rigidbody>();
         m_CurrentFuel = m_MaxFuel;
         m_IsAlive = true;
+        m_CurrentHealth = m_MaxHealth;  // Initialize health
 
         // Make sure all particle systems start off
         if (m_ThrusterParticles != null)
@@ -184,9 +191,16 @@ public class RocketController : MonoBehaviour
     /// </summary>
     private void Crash()
     {
-        m_IsAlive = false;
-        // Add crash effects or game over logic here
-        GameManager.Instance.GameOver();
+        if (m_CurrentHealth <= 0)
+        {
+            m_IsAlive = false;
+            GameManager.Instance.GameOver();
+        }
+        else
+        {
+            // Take damage instead of instant death
+            m_CurrentHealth -= 25f; // Adjust damage amount as needed
+        }
     }
 
     private void UpdateMaxHeight()
@@ -348,6 +362,16 @@ public class RocketController : MonoBehaviour
     }
 
     /// <summary>
+    /// Upgrades the health of the rocket
+    /// </summary>
+    /// <param name="_multiplier">Health increase multiplier</param>
+    public void UpgradeHealth(float _multiplier)
+    {
+        m_MaxHealth *= _multiplier;
+        m_CurrentHealth = m_MaxHealth;  // Heal to full when upgrading
+    }
+
+    /// <summary>
     /// Loads saved rocket stats
     /// </summary>
     /// <param name="_data">Saved game data to load from</param>
@@ -358,6 +382,8 @@ public class RocketController : MonoBehaviour
         m_BaseSpeed = _data.baseSpeed;
         m_MaxFuel = _data.maxFuel;
         m_TurnSpeed = _data.turnSpeed;
+        m_MaxHealth = _data.maxHealth;  // Load health
+        m_CurrentHealth = m_MaxHealth;
         m_CurrentFuel = m_MaxFuel;
     }
 
@@ -379,6 +405,7 @@ public class RocketController : MonoBehaviour
         m_HasLiftedOff = false;
         m_LiftoffTime = 0f;
         m_CurrentHeight = 0f;
+        m_CurrentHealth = m_MaxHealth;  // Reset health
         
         // Reset physics
         m_Rigidbody.isKinematic = false;  // Re-enable physics
